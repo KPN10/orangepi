@@ -1,0 +1,107 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+        compatible = "allwinner,sun8i-h3";
+};
+
+&ccu {
+        assigned-clocks = <&ccu 107>;
+        assigned-clock-parents = <&osc24M>;
+        assigned-clock-rates = <24000000>;
+};
+
+&pio {
+        csi_mclk_pin: csi-mclk-pin {
+                pins = "PE1";
+                function = "csi";
+        };
+};
+
+&i2c2_pins {
+        bias-pull-up;
+};
+
+&i2c2 {
+        status = "okay";
+
+        ov5640: camera@3c {
+                compatible = "ovti,ov5640";
+                reg = <0x3c>;
+                pinctrl-names = "default";
+                pinctrl-0 = <&csi_mclk_pin>;
+                clocks = <&ccu 107>;
+                clock-names = "xclk";
+
+                AVDD-supply = <&reg_vcc_af_csi>;
+                DOVDD-supply = <&reg_vdd_1v5_csi>;
+                DVDD-supply = <&reg_vcc_csi>;
+                reset-gpios = <&pio 4 14 1>; /* CSI-RST-R: PE14 */
+                powerdown-gpios = <&pio 4 15 0>; /* CSI-STBY-R: PE15 */
+
+                port {
+                        ov5640_ep: endpoint {
+                                remote-endpoint = <&csi_ep>;
+                                bus-width = <8>;
+                                data-shift = <2>; /* lines 9:2 are used */
+                                hsync-active = <1>; /* Active high */
+                                vsync-active = <0>; /* Active low */
+                                data-active = <1>;  /* Active high */
+                                pclk-sample = <1>;  /* Rising */
+                        };
+                };
+        };
+};
+
+&csi {
+        status = "okay";
+
+        port {
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                csi_ep: endpoint {
+                        remote-endpoint = <&ov5640_ep>;
+                        bus-width = <8>;
+                        hsync-active = <1>; /* Active high */
+                        vsync-active = <0>; /* Active low */
+                        data-active = <1>;  /* Active high */
+                        pclk-sample = <1>;  /* Rising */
+                };
+        };
+};
+
+&{/} {
+	reg_vdd_1v5_csi: vdd-1v5-csi {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd1v5-csi";
+		regulator-min-microvolt = <1500000>;
+		regulator-max-microvolt = <1500000>;
+		gpio = <&pio 6 13 0>; /* PG13 */
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	reg_vcc_csi: vcc-csi {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-csi";
+		regulator-min-microvolt = <2800000>;
+		regulator-max-microvolt = <2800000>;
+		gpio = <&pio 6 11 0>; /* PG11 */
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	reg_vcc_af_csi: vcc-af-csi {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-af-csi";
+		regulator-min-microvolt = <2800000>;
+		regulator-max-microvolt = <2800000>;
+		gpio = <&pio 0 17 0>; /* PA17 */
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+};
